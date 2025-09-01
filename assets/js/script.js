@@ -1,5 +1,6 @@
 const apiUrl = "https://newsdata.io/api/1/latest?q=";
-const apiKey = "pub_be613c8f57d6470ab2661482ecd0ae97";
+// const apiKey = "pub_be613c8f57d6470ab2661482ecd0ae97";
+const apiKey = "pub_43781abe325740f899fea58a3459fa9e";
 
 // const targetedCities = [
 //   "Delhi",
@@ -32,6 +33,7 @@ const langMarathiBtn = document.querySelector(".language-selection .marathi");
 // --- STATE MANAGEMENT ---
 let currentQuery = "";
 let currentLanguage = "en";
+let baseQuery = "India";
 let nextPageToken = null;
 
 // --- SIDEBAR FUNCTIONS ---
@@ -60,6 +62,7 @@ async function fetchNews(query, language = "en", pageToken = null) {
     const data = await response.json();
 
     currentQuery = query;
+    cbaseQuery = language === "en" ? query : baseQuery;
     currentLanguage = language;
     nextPageToken = data.nextPage || null;
 
@@ -107,7 +110,7 @@ function fillCardContent(cardElement, article) {
   const authorSpan = cardElement.querySelector(".author a");
   const timeSpan = cardElement.querySelector(".time");
   const dateSpan = cardElement.querySelector(".date");
-  const descriptionParagraph = cardElement.querySelector(".about-article p");
+  const descriptionParagraph = cardElement.querySelector(".about-article p a");
 
   const imageUrl = article.image_url || "assets/img/default.jpg";
   const title = article.title || "No Title";
@@ -194,9 +197,10 @@ if (loadMoreBtn) {
 if (langEnBtn) {
   langEnBtn.addEventListener("click", (e) => {
     e.preventDefault();
+    langMarathiBtn.classList.remove("active");
     langHiBtn.classList.remove("active");
     langEnBtn.classList.add("active");
-    fetchNews(currentQuery, "en");
+    fetchNews(baseQuery, "en");
   });
 }
 
@@ -208,7 +212,7 @@ if (langHiBtn) {
     langHiBtn.classList.add("active");
 
     const queryForHindi =
-      currentQuery.toLowerCase() === "india" ? "भारत" : currentQuery;
+      baseQuery.toLowerCase() === "india" ? "भारत" : baseQuery;
 
     fetchNews(queryForHindi, "hi");
   });
@@ -221,7 +225,7 @@ if (langMarathiBtn) {
     langMarathiBtn.classList.add("active");
 
     const queryForMarathi =
-      currentQuery.toLowerCase() === "india" ? "भारत" : currentQuery;
+      baseQuery.toLowerCase() === "india" ? "भारत" : baseQuery;
 
     fetchNews(queryForMarathi, "mr");
   });
@@ -229,41 +233,44 @@ if (langMarathiBtn) {
 
 //for voice button
 
-async function readText() {
-  const text = document.querySelector(".clamped-text").textContent.trim();
+async function readText(button) {
+  const textElement = button
+    .closest(".about-article")
+    .querySelector(".clamped-text a");
+  const text = textElement?.textContent.trim();
+
+  if (!text) return;
 
   let lang = "en-US";
 
-  // Detect Hindi or Marathi
+  // Detect Hindi or Marathi based on Devanagari script
   if (/[अ-ह]/.test(text)) {
-    if (/माझ्या|आपले|स्वागत/.test(text)) {
-      lang = "mr-IN";
-    } else {
-      lang = "hi-IN";
-    }
+    lang = /माझ्या|आपले|स्वागत/.test(text) ? "mr-IN" : "hi-IN";
   }
 
-  const response = await fetch(
-    "https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyCEW5pL4CQ3bww1KuR7wPTLxw31iIC9TSY",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        input: { text: text },
-        voice: { languageCode: lang, ssmlGender: "FEMALE" },
-        audioConfig: { audioEncoding: "MP3" },
-      }),
+  try {
+    const response = await fetch(
+      "https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyCEW5pL4CQ3bww1KuR7wPTLxw31iIC9TSY",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          input: { text: text },
+          voice: { languageCode: lang, ssmlGender: "FEMALE" },
+          audioConfig: { audioEncoding: "MP3" },
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (data.audioContent) {
+      const audio = new Audio("data:audio/mp3;base64," + data.audioContent);
+      audio.play();
+    } else {
+      console.error("No audio returned", data);
     }
-  );
-
-  const data = await response.json();
-
-  if (data.audioContent) {
-    // Play the audio
-    let audio = new Audio("data:audio/mp3;base64," + data.audioContent);
-    audio.play();
-  } else {
-    console.error("Audio content not returned:", data);
+  } catch (error) {
+    console.error("Error during TTS fetch:", error);
   }
 }
-
