@@ -222,13 +222,9 @@ body {
     overflow: hidden;
 }
 
-.text-to-speech {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-
-    width: 100%;
-    height: 20px;
+.clamped-text a{
+    text-decoration: none;
+    color: #44444d;
 }
 
 .text-to-speech:focus{
@@ -387,4 +383,3 @@ button {
         display: none;
     }
 }
-
