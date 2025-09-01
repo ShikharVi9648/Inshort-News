@@ -63,11 +63,21 @@ async function fetchNews(query, language = "en", pageToken = null) {
     currentLanguage = language;
     nextPageToken = data.nextPage || null;
 
+    if (!pageToken) {
+      clearOldNews();
+    }
+
     bindData(data.results || []);
   } catch (error) {
     console.error("Error fetching the news:", error);
     bindData([]);
   }
+}
+
+function clearOldNews() {
+  newsCards.forEach((card) => {
+    card.style.display = "none";
+  });
 }
 
 function bindData(articles) {
@@ -256,3 +266,4 @@ async function readText() {
     console.error("Audio content not returned:", data);
   }
 }
+
