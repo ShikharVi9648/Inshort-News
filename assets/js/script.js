@@ -1,21 +1,6 @@
 const apiUrl = "https://newsdata.io/api/1/latest?q=";
-// const apiKey = "pub_be613c8f57d6470ab2661482ecd0ae97";
 const apiKey = "pub_43781abe325740f899fea58a3459fa9e";
-
-// const targetedCities = [
-//   "Delhi",
-//   "Mumbai",
-//   "Kolkata",
-//   "Pune",
-//   "Chandigarh",
-//   "Ahmedabad",
-//   "Lucknow",
-//   "Chennai",
-//   "Hyderabad",
-//   "Bangalore",
-// ];
-
-// const cityQuery = targetedCities.join(" OR ");
+// const apiKey = "pub_be613c8f57d6470ab2661482ecd0ae97";
 
 // --- DOM ELEMENTS ---
 const sidebar = document.querySelector(".sidebar");
@@ -35,38 +20,37 @@ let currentQuery = "";
 let currentLanguage = "en";
 let baseQuery = "India";
 let nextPageToken = null;
+const shownArticles = new Set();
 
-// --- SIDEBAR FUNCTIONS ---
+// --- SIDEBAR ---
 function showsidebar() {
-  if (sidebar) sidebar.style.display = "block";
-  if (hamburgerMenu) hamburgerMenu.style.display = "none";
-  if (closeMenu) closeMenu.style.display = "block";
+  sidebar.style.display = "block";
+  hamburgerMenu.style.display = "none";
+  closeMenu.style.display = "block";
 }
-
 function closesidebar() {
-  if (sidebar) sidebar.style.display = "none";
-  if (hamburgerMenu) hamburgerMenu.style.display = "block";
-  if (closeMenu) closeMenu.style.display = "none";
+  sidebar.style.display = "none";
+  hamburgerMenu.style.display = "block";
+  closeMenu.style.display = "none";
 }
 
+// --- FETCH NEWS (Single Language) ---
 async function fetchNews(query, language = "en", pageToken = null) {
   try {
     let url = `${apiUrl}${encodeURIComponent(
       query
     )}&language=${language}&apiKey=${apiKey}`;
-    if (pageToken) {
-      url += `&page=${pageToken}`;
-    }
+    if (pageToken) url += `&page=${pageToken}`;
 
     const response = await fetch(url);
     const data = await response.json();
 
     currentQuery = query;
-    cbaseQuery = language === "en" ? query : baseQuery;
     currentLanguage = language;
     nextPageToken = data.nextPage || null;
 
     if (!pageToken) {
+      shownArticles.clear();
       clearOldNews();
     }
 
@@ -77,12 +61,58 @@ async function fetchNews(query, language = "en", pageToken = null) {
   }
 }
 
+// --- FETCH NEWS (MIXED LANGUAGES) ---
+async function fetchMixedLanguageNews(query) {
+  try {
+    const languages = ["en", "hi", "mr"];
+    const promises = languages.map((lang) =>
+      fetch(
+        `${apiUrl}${encodeURIComponent(
+          query
+        )}&language=${lang}&apiKey=${apiKey}`
+      )
+        .then((res) => res.json())
+        .catch((err) => {
+          console.error(`Failed to fetch ${lang} news`, err);
+          return { results: [] };
+        })
+    );
+
+    const allResults = await Promise.all(promises);
+    let combinedArticles = allResults.flatMap((result) => result.results || []);
+
+    // Remove duplicates
+    const seen = new Set();
+    combinedArticles = combinedArticles.filter((article) => {
+      const key = `${article.title}-${article.link}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    // Shuffle
+    combinedArticles.sort(() => 0.5 - Math.random());
+
+    shownArticles.clear();
+    clearOldNews();
+
+    bindData(combinedArticles);
+
+    if (loadMoreContainer) loadMoreContainer.style.display = "none";
+  } catch (error) {
+    console.error("Error fetching mixed language news:", error);
+    bindData([]);
+  }
+}
+
+// --- CLEAR OLD NEWS ---
 function clearOldNews() {
   newsCards.forEach((card) => {
     card.style.display = "none";
   });
 }
 
+// --- BIND DATA TO CARDS ---
 function bindData(articles) {
   for (let i = 0; i < newsCards.length; i++) {
     const card = newsCards[i];
@@ -96,15 +126,12 @@ function bindData(articles) {
     }
   }
 
-  // Show or hide the "Load More" button
-  if (loadMoreContainer) {
-    loadMoreContainer.style.display = nextPageToken ? "flex" : "none";
-  }
+  // Toggle Load More
+  loadMoreContainer.style.display = nextPageToken ? "flex" : "none";
 }
 
+// --- FILL CARD CONTENT ---
 function fillCardContent(cardElement, article) {
-  if (!cardElement) return;
-
   const imageElement = cardElement.querySelector(".content-img");
   const titleLink = cardElement.querySelector(".article-text a");
   const authorSpan = cardElement.querySelector(".author a");
@@ -131,60 +158,42 @@ function fillCardContent(cardElement, article) {
     timeZone: "Asia/Kolkata",
   });
 
-  if (imageElement) imageElement.src = imageUrl;
-  if (titleLink) {
-    titleLink.href = url;
-    titleLink.textContent = title;
-  }
-  if (authorSpan) authorSpan.textContent = author;
-  if (timeSpan) timeSpan.textContent = formattedTime;
-  if (dateSpan) dateSpan.textContent = formattedDate;
-  if (descriptionParagraph) descriptionParagraph.textContent = description;
+  imageElement.src = imageUrl;
+  titleLink.href = url;
+  titleLink.textContent = title;
+  authorSpan.textContent = author;
+  timeSpan.textContent = formattedTime;
+  dateSpan.textContent = formattedDate;
+  descriptionParagraph.textContent = description;
 }
 
-// --- INITIALIZATION & EVENT LISTENERS ---
-
-// Function to set up all sidebar links (existing + new cities)
+// --- INITIALIZE SIDEBAR LINKS ---
 function initializeSidebar() {
-  // 1. Add event listeners to existing links (India, Business, etc.)
-  const existingLinks = document.querySelectorAll(
-    ".sidebar-menu .sidebar-item a"
-  );
-  existingLinks.forEach((link) => {
+  const links = document.querySelectorAll(".sidebar-menu .sidebar-item a");
+  links.forEach((link) => {
     link.addEventListener("click", (event) => {
       event.preventDefault();
       const query = event.target.textContent.trim();
       fetchNews(query, currentLanguage);
-      // if (query.toLowerCase() === "india") {
-      //   fetchNews(cityQuery);
-      // } else {
-      //   fetchNews(query);
-      // }
       closesidebar();
     });
   });
 }
 
-// Main execution starts here
+// --- EVENT LISTENERS ---
 window.addEventListener("load", () => {
-  // Set up all sidebar links
   initializeSidebar();
 
-  langEnBtn.classList.add("active");
+  langEnBtn.classList.remove("active");
+  langHiBtn.classList.remove("active");
+  langMarathiBtn.classList.remove("active");
 
-  // Fetch default news on page load
-  fetchNews("India");
+  fetchMixedLanguageNews("India");
 });
 
-// Hamburger menu click events
-if (hamburgerMenu) {
-  hamburgerMenu.addEventListener("click", showsidebar);
-}
-if (closeMenu) {
-  closeMenu.addEventListener("click", closesidebar);
-}
+hamburgerMenu.addEventListener("click", showsidebar);
+closeMenu.addEventListener("click", closesidebar);
 
-// Load more button click event
 if (loadMoreBtn) {
   loadMoreBtn.addEventListener("click", (event) => {
     event.preventDefault();
@@ -194,56 +203,45 @@ if (loadMoreBtn) {
   });
 }
 
-if (langEnBtn) {
-  langEnBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    langMarathiBtn.classList.remove("active");
-    langHiBtn.classList.remove("active");
-    langEnBtn.classList.add("active");
-    fetchNews(baseQuery, "en");
-  });
-}
+langEnBtn.addEventListener("click", (e) => {
+  e.preventDefault();
+  langEnBtn.classList.add("active");
+  langHiBtn.classList.remove("active");
+  langMarathiBtn.classList.remove("active");
+  fetchNews(baseQuery, "en");
+});
 
-if (langHiBtn) {
-  langHiBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    langEnBtn.classList.remove("active");
-    langMarathiBtn.classList.remove("active");
-    langHiBtn.classList.add("active");
+langHiBtn.addEventListener("click", (e) => {
+  e.preventDefault();
+  langEnBtn.classList.remove("active");
+  langHiBtn.classList.add("active");
+  langMarathiBtn.classList.remove("active");
 
-    const queryForHindi =
-      baseQuery.toLowerCase() === "india" ? "भारत" : baseQuery;
+  const queryForHindi =
+    baseQuery.toLowerCase() === "india" ? "भारत" : baseQuery;
+  fetchNews(queryForHindi, "hi");
+});
 
-    fetchNews(queryForHindi, "hi");
-  });
-}
-if (langMarathiBtn) {
-  langMarathiBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    langEnBtn.classList.remove("active");
-    langHiBtn.classList.remove("active");
-    langMarathiBtn.classList.add("active");
+langMarathiBtn.addEventListener("click", (e) => {
+  e.preventDefault();
+  langEnBtn.classList.remove("active");
+  langHiBtn.classList.remove("active");
+  langMarathiBtn.classList.add("active");
 
-    const queryForMarathi =
-      baseQuery.toLowerCase() === "india" ? "भारत" : baseQuery;
+  const queryForMarathi =
+    baseQuery.toLowerCase() === "india" ? "भारत" : baseQuery;
+  fetchNews(queryForMarathi, "mr");
+});
 
-    fetchNews(queryForMarathi, "mr");
-  });
-}
-
-//for voice button
-
+// --- TEXT TO SPEECH ---
 async function readText(button) {
   const textElement = button
     .closest(".about-article")
     .querySelector(".clamped-text a");
   const text = textElement?.textContent.trim();
-
   if (!text) return;
 
   let lang = "en-US";
-
-  // Detect Hindi or Marathi based on Devanagari script
   if (/[अ-ह]/.test(text)) {
     lang = /माझ्या|आपले|स्वागत/.test(text) ? "mr-IN" : "hi-IN";
   }
@@ -255,7 +253,7 @@ async function readText(button) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          input: { text: text },
+          input: { text },
           voice: { languageCode: lang, ssmlGender: "FEMALE" },
           audioConfig: { audioEncoding: "MP3" },
         }),
@@ -263,7 +261,6 @@ async function readText(button) {
     );
 
     const data = await response.json();
-
     if (data.audioContent) {
       const audio = new Audio("data:audio/mp3;base64," + data.audioContent);
       audio.play();
