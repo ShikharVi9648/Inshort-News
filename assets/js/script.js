@@ -23,6 +23,21 @@ let baseQuery = "India";
 let nextPageToken = null;
 const shownArticles = new Set();
 
+
+
+//loader
+const loadingPage = document.querySelector(".loading-page");
+
+function showLoader() {
+  loadingPage.style.display = "flex";
+ 
+
+}
+function hideLoader() {
+  loadingPage.style.display = "none";
+  
+}
+
 // --- SIDEBAR ---
 function showsidebar() {
   sidebar.style.display = "block";
@@ -37,6 +52,7 @@ function closesidebar() {
 
 // --- FETCH NEWS (Single Language) ---
 async function fetchNews(query, language = "en", pageToken = null) {
+  showLoader();
   try {
     let url = `${apiUrl}${encodeURIComponent(
       query
@@ -56,14 +72,17 @@ async function fetchNews(query, language = "en", pageToken = null) {
     }
 
     bindData(data.results || []);
+    hideLoader(); 
   } catch (error) {
     console.error("Error fetching the news:", error);
     bindData([]);
+     hideLoader();
   }
 }
 
 // --- FETCH NEWS (MIXED LANGUAGES) ---
 async function fetchMixedLanguageNews(query) {
+  showLoader();
   try {
     const languages = ["en", "hi", "mr"];
     const promises = languages.map((lang) =>
@@ -98,11 +117,13 @@ async function fetchMixedLanguageNews(query) {
     clearOldNews();
 
     bindData(combinedArticles);
+    hideLoader();
 
     if (loadMoreContainer) loadMoreContainer.style.display = "none";
   } catch (error) {
     console.error("Error fetching mixed language news:", error);
     bindData([]);
+    hideLoader();
   }
 }
 
