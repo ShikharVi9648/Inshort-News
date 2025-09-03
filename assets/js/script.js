@@ -1,6 +1,6 @@
 const apiUrl = "https://newsdata.io/api/1/latest?q=";
-// const apiKey = "pub_43781abe325740f899fea58a3459fa9e";
-const apiKey = "pub_be613c8f57d6470ab2661482ecd0ae97";
+const apiKey = "pub_43781abe325740f899fea58a3459fa9e";
+// const apiKey = "pub_be613c8f57d6470ab2661482ecd0ae97";
 
 // --- DOM ELEMENTS ---
 const sidebar = document.querySelector(".sidebar");
@@ -333,3 +333,4 @@ async function readText(button) {
     console.error("Error during TTS fetch:", error);
   }
 }
+
