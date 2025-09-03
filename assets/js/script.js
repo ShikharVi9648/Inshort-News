@@ -1,9 +1,10 @@
 const apiUrl = "https://newsdata.io/api/1/latest?q=";
-const apiKey = "pub_43781abe325740f899fea58a3459fa9e";
-// const apiKey = "pub_be613c8f57d6470ab2661482ecd0ae97";
+// const apiKey = "pub_43781abe325740f899fea58a3459fa9e";
+const apiKey = "pub_be613c8f57d6470ab2661482ecd0ae97";
 
 // --- DOM ELEMENTS ---
 const sidebar = document.querySelector(".sidebar");
+
 const sidebarMenu = document.querySelector(".sidebar-menu");
 const hamburgerMenu = document.querySelector(".hamburger-menu");
 const closeMenu = document.querySelector(".close");
@@ -241,9 +242,49 @@ async function readText(button) {
   const text = textElement?.textContent.trim();
   if (!text) return;
 
+  const mood = button.getAttribute("data-mood") || "neutral";
+
   let lang = "en-US";
   if (/[अ-ह]/.test(text)) {
     lang = /माझ्या|आपले|स्वागत/.test(text) ? "mr-IN" : "hi-IN";
+  }
+
+  let voiceConfig = {
+    languageCode: lang,
+    ssmlGender: "FEMALE",
+  };
+  let audioConfig = {
+    audioEncoding: "MP3",
+    pitch: 0,
+    speakingRate: 1,
+  };
+
+  switch (mood) {
+    case "happy":
+      audioConfig.pitch = 5;
+      audioConfig.speakingRate = 1.2;
+      voiceConfig.ssmlGender = "FEMALE";
+      break;
+    case "sad":
+      audioConfig.pitch = -2;
+      audioConfig.speakingRate = 0.9;
+      voiceConfig.ssmlGender = "MALE";
+      break;
+    case "angry":
+      audioConfig.pitch = 2;
+      audioConfig.speakingRate = 1.3;
+      voiceConfig.ssmlGender = "MALE";
+      break;
+    case "calm":
+      audioConfig.pitch = 0;
+      audioConfig.speakingRate = 0.95;
+      voiceConfig.ssmlGender = "FEMALE";
+      break;
+    default:
+      // neutral/default
+      audioConfig.pitch = 0;
+      audioConfig.speakingRate = 1.0;
+      voiceConfig.ssmlGender = "FEMALE";
   }
 
   try {
@@ -254,8 +295,8 @@ async function readText(button) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           input: { text },
-          voice: { languageCode: lang, ssmlGender: "FEMALE" },
-          audioConfig: { audioEncoding: "MP3" },
+          voice: voiceConfig,
+          audioConfig: audioConfig,
         }),
       }
     );
