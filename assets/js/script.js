@@ -23,19 +23,14 @@ let baseQuery = "India";
 let nextPageToken = null;
 const shownArticles = new Set();
 
-
-
 //loader
 const loadingPage = document.querySelector(".loading-page");
 
 function showLoader() {
   loadingPage.style.display = "flex";
- 
-
 }
 function hideLoader() {
   loadingPage.style.display = "none";
-  
 }
 
 // --- SIDEBAR ---
@@ -52,7 +47,10 @@ function closesidebar() {
 
 // --- FETCH NEWS (Single Language) ---
 async function fetchNews(query, language = "en", pageToken = null) {
-  showLoader();
+  newsCards.forEach(
+    (card) => (card.querySelector(".card-loader").style.display = "flex")
+  );
+
   try {
     let url = `${apiUrl}${encodeURIComponent(
       query
@@ -68,21 +66,29 @@ async function fetchNews(query, language = "en", pageToken = null) {
 
     if (!pageToken) {
       shownArticles.clear();
-      clearOldNews();
+      clearOldNews(); // This function will be slightly modified
     }
 
     bindData(data.results || []);
-    hideLoader(); 
+    newsCards.forEach(
+      (card) => (card.querySelector(".card-loader").style.display = "none")
+    );
   } catch (error) {
     console.error("Error fetching the news:", error);
     bindData([]);
-     hideLoader();
+    // Hide all loaders on error
+    newsCards.forEach(
+      (card) => (card.querySelector(".card-loader").style.display = "none")
+    );
   }
 }
 
 // --- FETCH NEWS (MIXED LANGUAGES) ---
 async function fetchMixedLanguageNews(query) {
-  showLoader();
+  newsCards.forEach(
+    (card) => (card.querySelector(".card-loader").style.display = "flex")
+  );
+
   try {
     const languages = ["en", "hi", "mr"];
     const promises = languages.map((lang) =>
@@ -117,13 +123,19 @@ async function fetchMixedLanguageNews(query) {
     clearOldNews();
 
     bindData(combinedArticles);
-    hideLoader();
+    // Hide all loaders after data is bound
+    newsCards.forEach(
+      (card) => (card.querySelector(".card-loader").style.display = "none")
+    );
 
     if (loadMoreContainer) loadMoreContainer.style.display = "none";
   } catch (error) {
     console.error("Error fetching mixed language news:", error);
     bindData([]);
-    hideLoader();
+    // Hide all loaders on error
+    newsCards.forEach(
+      (card) => (card.querySelector(".card-loader").style.display = "none")
+    );
   }
 }
 
@@ -143,8 +155,12 @@ function bindData(articles) {
     if (article && article.image_url && article.title && article.description) {
       fillCardContent(card, article);
       card.style.display = "flex";
+      // Hide the loader for this specific card
+      card.querySelector(".card-loader").style.display = "none";
     } else {
       card.style.display = "none";
+      // Hide the loader for this specific card
+      card.querySelector(".card-loader").style.display = "none";
     }
   }
 
@@ -282,19 +298,19 @@ async function readText(button) {
 
   switch (mood) {
     case "happy":
-      audioConfig.pitch = 5;
-      audioConfig.speakingRate = 1.2;
+      audioConfig.pitch = 1;
+      audioConfig.speakingRate = 1.1;
       voiceConfig.ssmlGender = "FEMALE";
       break;
     case "sad":
-      audioConfig.pitch = -2;
-      audioConfig.speakingRate = 0.9;
-      voiceConfig.ssmlGender = "MALE";
+      audioConfig.pitch = -5;
+      audioConfig.speakingRate = 0.7;
+      voiceConfig.ssmlGender = "FEMALE";
       break;
     case "angry":
-      audioConfig.pitch = 2;
-      audioConfig.speakingRate = 1.3;
-      voiceConfig.ssmlGender = "MALE";
+      audioConfig.pitch = -4;
+      audioConfig.speakingRate = 1.1;
+      voiceConfig.ssmlGender = "FEMALE";
       break;
     case "calm":
       audioConfig.pitch = 0;
@@ -333,4 +349,3 @@ async function readText(button) {
     console.error("Error during TTS fetch:", error);
   }
 }
-
